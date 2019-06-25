@@ -4,4 +4,10 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += \
-        main.cpp
+        main.cpp \
+    persistentredblacktree.cpp \
+    persistentnode.cpp
+
+HEADERS += \
+    persistentredblacktree.h \
+    persistentnode.h
