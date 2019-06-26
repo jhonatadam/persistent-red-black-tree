@@ -7,16 +7,22 @@ using namespace std;
 
 class PersistentNode
 {
+    enum PointerStatus {None, Right, Left};
+
     const int key;
     PersistentNode* right;
     PersistentNode* left;
     PersistentNode* extraPointer;
     unsigned extraPointerVersion;
+    PointerStatus extraPointerStatus;
 
 public:
     PersistentNode(const int & key,
                    PersistentNode *right,
                    PersistentNode *left);
+
+    PersistentNode * getRight();
+    PersistentNode * getLeft();
 
 
 };

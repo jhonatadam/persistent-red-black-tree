@@ -5,7 +5,6 @@
 
 #include <vector>
 
-
 class PersistentRedBlackTree
 {
     vector<PersistentNode*> accessPointers;
