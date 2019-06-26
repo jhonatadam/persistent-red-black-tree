@@ -1,5 +1,10 @@
 #include "persistentnode.h"
 
+int PersistentNode::getKey() const
+{
+    return key;
+}
+
 PersistentNode::PersistentNode(const int &key,
                                PersistentNode *right,
                                PersistentNode *left):
@@ -8,14 +13,18 @@ PersistentNode::PersistentNode(const int &key,
 {
 }
 
-PersistentNode *PersistentNode::getRight()
+PersistentNode *PersistentNode::getRight(unsigned version)
 {
-    return extraPointerStatus == Right ? extraPointer : right;
+    if ((extraPointerStatus == Right) && (version >= extraPointerVersion))
+        return extraPointer;
+    return right;
 }
 
-PersistentNode *PersistentNode::getLeft()
+PersistentNode *PersistentNode::getLeft(unsigned version)
 {
-    return extraPointerStatus == Left ? extraPointer : left;
+    if ((extraPointerStatus == Left) && (version >= extraPointerVersion))
+        return extraPointer;
+    return left;
 }
 
 

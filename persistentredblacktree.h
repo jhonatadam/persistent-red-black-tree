@@ -4,6 +4,7 @@
 #include <persistentnode.h>
 
 #include <vector>
+#include <limits>
 
 class PersistentRedBlackTree
 {

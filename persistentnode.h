@@ -21,10 +21,10 @@ public:
                    PersistentNode *right,
                    PersistentNode *left);
 
-    PersistentNode * getRight();
-    PersistentNode * getLeft();
+    PersistentNode * getRight(unsigned version);
+    PersistentNode * getLeft(unsigned version);
 
-
+    int getKey() const;
 };
 
 #endif // PERSISTENTNODE_H
