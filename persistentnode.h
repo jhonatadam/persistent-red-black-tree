@@ -7,24 +7,27 @@ using namespace std;
 
 class PersistentNode
 {
-    enum PointerStatus {None, Right, Left};
-
-    const int key;
-    PersistentNode* right;
-    PersistentNode* left;
-    PersistentNode* extraPointer;
-    unsigned extraPointerVersion;
-    PointerStatus extraPointerStatus;
-
 public:
+    const int key;
+
+    PersistentNode(const int &key, unsigned version);
+
     PersistentNode(const int & key,
                    PersistentNode *right,
                    PersistentNode *left);
 
-    PersistentNode * getRight(unsigned version);
+    bool update(PersistentNode *node, unsigned version);
     PersistentNode * getLeft(unsigned version);
+    PersistentNode * getRight(unsigned version);
 
-    int getKey() const;
+private:
+    enum PointerStatus {None, Right, Left};
+
+    PersistentNode* left;
+    PersistentNode* right;
+    PersistentNode* extraPointer;
+    PointerStatus extraPointerStatus;
+    unsigned lastUpdateVersion;
 };
 
 #endif // PERSISTENTNODE_H

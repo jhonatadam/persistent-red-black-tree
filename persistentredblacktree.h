@@ -3,13 +3,13 @@
 
 #include <persistentnode.h>
 
+#include <string>
 #include <vector>
 #include <limits>
+#include <stack>
 
 class PersistentRedBlackTree
 {
-    vector<PersistentNode*> accessPointers;
-
 public:
     PersistentRedBlackTree();
 
@@ -17,6 +17,11 @@ public:
     unsigned remove(const int &key);
     int successor(const int &key, const unsigned &version);
     int predecessor(const int &key, const unsigned &version);
+    string toString(unsigned version);
+
+private:
+    vector<PersistentNode*> accessPointers;
+    void treeToString(PersistentNode *node, string &str, unsigned version);
 };
 
 #endif // PERSISTENTREDBLACKTREE_H
