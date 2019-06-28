@@ -11,13 +11,13 @@ PersistentNode::PersistentNode(const int &key, unsigned version) :
 }
 
 PersistentNode::PersistentNode(const int &key,
-                               PersistentNode *right,
-                               PersistentNode *left):
+                               PersistentNode *left,
+                               PersistentNode *right, unsigned version):
     key(key), left(left), right(right)
 {
     extraPointer = nullptr;
     extraPointerStatus = None;
-    lastUpdateVersion = 0;
+    lastUpdateVersion = version;
 }
 
 bool PersistentNode::update(PersistentNode *node, unsigned version)

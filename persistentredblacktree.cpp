@@ -11,7 +11,7 @@ unsigned PersistentRedBlackTree::insert(const int &key)
 
     // if there is no version
     if (accessPointers.empty() || (accessPointers.back() == nullptr)) {
-        accessPointers.push_back(new PersistentNode(key, nullptr, nullptr));
+        accessPointers.push_back(new PersistentNode(key, version));
         return version;
     }
 
@@ -20,7 +20,7 @@ unsigned PersistentRedBlackTree::insert(const int &key)
 
     while (currentNode != nullptr) {
         path.push(currentNode);
-        if (key < path.top()->key)
+        if (key < currentNode->key)
             currentNode = currentNode->getLeft(version);
         else
             currentNode = currentNode->getRight(version);
@@ -28,13 +28,25 @@ unsigned PersistentRedBlackTree::insert(const int &key)
 
     currentNode = new PersistentNode(key, version);
 
-    while (!path.top()->update(currentNode, version))
-    {
-        PersistentNode* parentCopy = new PersistentNode(path.top()->key, version);
+    while (!path.top()->update(currentNode, version)) {
+        PersistentNode* parentCopy = new PersistentNode(path.top()->key,
+                                                        path.top()->getLeft(version),
+                                                        path.top()->getRight(version),
+                                                        version);
         parentCopy->update(currentNode, version);
+        currentNode = parentCopy;
         path.pop();
-        path.push(parentCopy);
+
+        if (path.empty())
+            break;
     }
+
+    while(!path.empty()) {
+        currentNode = path.top();
+        path.pop();
+    }
+
+    accessPointers.push_back(currentNode);
 
     return version;
 }
@@ -107,13 +119,13 @@ void PersistentRedBlackTree::treeToString(PersistentNode *node, string &str, uns
 {
     if (node == nullptr)
     {
-        str = "[]";
+        str += "[]";
         return;
     }
 
-    str = "[" + to_string(node->key) + ", ";
+    str += "[" + to_string(node->key) + ", ";
     treeToString(node->getLeft(version), str, version);
-    str = ", ";
+    str += ", ";
     treeToString(node->getRight(version), str, version);
-    str = "]";
+    str += "]";
 }

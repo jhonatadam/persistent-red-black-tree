@@ -13,8 +13,9 @@ public:
     PersistentNode(const int &key, unsigned version);
 
     PersistentNode(const int & key,
+                   PersistentNode *left,
                    PersistentNode *right,
-                   PersistentNode *left);
+                   unsigned version);
 
     bool update(PersistentNode *node, unsigned version);
     PersistentNode * getLeft(unsigned version);
