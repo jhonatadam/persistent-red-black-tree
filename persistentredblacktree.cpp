@@ -28,15 +28,100 @@ unsigned PersistentRedBlackTree::insert(const int &key)
     }
 
     path.push(new PersistentNode(key, version));
-    // ligando novo nó à arvore
-//    currentNode = new PersistentNode(key, version);
-//    PersistentNode* currentNodeParent = path.top()->updateOrCopy(currentNode, version);
-//    path.pop();
-//    path.push(currentNodeParent);
-//    path.push(currentNode);
 
     accessPointers.push_back(insertFixup(path, version));
     accessPointers.back()->setColor(Black);
+    return version;
+}
+
+unsigned PersistentRedBlackTree::remove(const int &key)
+{
+    unsigned version = unsigned(accessPointers.size());
+
+    // if there is no version
+    if (accessPointers.empty() || (accessPointers.back() == nullptr))
+        return version - 1;
+
+    stack<PersistentNode*> path;
+    PersistentNode* currentNode = accessPointers.back();
+
+    while (currentNode != nullptr) {
+        if (key == currentNode->key)
+            break;
+
+        path.push(currentNode);
+
+        if (key < currentNode->key)
+            currentNode = currentNode->getLeft(version);
+        else
+            currentNode = currentNode->getRight(version);
+    }
+    NodeColor successorColor;
+    // a chave não está na árvore
+    if (currentNode == nullptr) {
+        return version - 1;
+    }// o nó a ser removido não tem filhos
+    else if (currentNode->getLeft(version) == nullptr && currentNode->getRight(version) == nullptr) {
+        if (path.empty()) { // a arvore tem apenas um nó
+            accessPointers.push_back(nullptr);
+            return version;
+        }
+        PointerStatus status = (currentNode->key < path.top()->key ? Left : Right);
+        PersistentNode * nodeParent = path.top()->updateOrCopy(nullptr, version, status);
+        successorColor = currentNode->getColor();
+        path.pop();
+        path.push(nodeParent);
+    } // o nó a ser removido tem apenas filho a direita
+    else if (currentNode->getLeft(version) == nullptr) {
+        successorColor = currentNode->getColor();
+        path.push(currentNode->getRight(version));
+//        PersistentNode * nodeParent = path.top()->updateOrCopy(currentNode->getRight(version), version);
+//        path.pop();
+//        path.push(nodeParent);
+//        path.push(currentNode->getRight(version));
+    } // o nó a ser removido tem apenas filho a esquerda
+    else if (currentNode->getRight(version) == nullptr) {
+        successorColor = currentNode->getColor();
+        path.push(currentNode->getLeft(version));
+//        PersistentNode * nodeParent = path.top()->updateOrCopy(currentNode->getLeft(version), version);
+//        path.pop();
+//        path.push(nodeParent);
+//        path.push(currentNode->getLeft(version));
+    } // o nó tem dois filhos
+    else {
+        queue<PersistentNode*> pathToSucessor;
+        PersistentNode* nodeSuccessor = currentNode->getRight(version);
+        while (nodeSuccessor->getLeft(version) != nullptr) {
+            pathToSucessor.push(nodeSuccessor);
+            nodeSuccessor = nodeSuccessor->getLeft(version);
+        }
+        successorColor = nodeSuccessor->getColor();
+        PersistentNode* successorChild = nodeSuccessor->getRight(version);
+
+        nodeSuccessor = nodeSuccessor->updateOrCopy(currentNode->getLeft(version),version);// atualiza o filho esquerdo do sucessor
+        nodeSuccessor->setColor(currentNode->getColor());
+        path.push(nodeSuccessor);
+
+        pathToSucessor.push(successorChild);//corrigir caso seja nulo
+        while(!pathToSucessor.empty()){
+            path.push(pathToSucessor.front());
+            pathToSucessor.pop();
+        }
+
+    }
+    if(successorColor == Black){
+        accessPointers.push_back(removeFixup(path, version));
+    }
+    else{
+        currentNode = path.top();
+        path.pop();
+        while(!path.empty()){
+            currentNode = path.top()->updateOrCopy(currentNode,version);
+            path.pop();
+        }
+        accessPointers.push_back(currentNode);
+    }
+    //accessPointers.back()->setColor(Black); a arvore pode ter ficado vazia
     return version;
 }
 
@@ -175,6 +260,11 @@ PersistentNode *PersistentRedBlackTree::insertFixup(stack<PersistentNode *> path
     }
 
     return node;
+}
+
+PersistentNode *PersistentRedBlackTree::removeFixup(stack<PersistentNode *> path, const unsigned &version)
+{
+    return path.top();
 }
 
 PersistentNode *PersistentRedBlackTree::rotateLeft(PersistentNode *node, const unsigned & version)

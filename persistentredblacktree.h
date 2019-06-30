@@ -8,6 +8,7 @@
 #include <vector>
 #include <limits>
 #include <stack>
+#include <queue>
 
 class PersistentRedBlackTree
 {
@@ -24,6 +25,7 @@ private:
     vector<PersistentNode*> accessPointers;
 
     PersistentNode *insertFixup(stack<PersistentNode*> path, const unsigned &version);
+    PersistentNode *removeFixup(stack<PersistentNode*> path, const unsigned &version);
     PersistentNode *rotateLeft(PersistentNode *node, const unsigned &version);
     PersistentNode *rotateRight(PersistentNode *node, const unsigned &version);
     void flipColors(PersistentNode *node, const unsigned &version);

@@ -32,6 +32,10 @@ int main()
             cin >> key >> version;
             cout << rbt.predecessor(key, version) << endl;
         }
+        else if (str == "rm"){
+            cin >> key;
+            rbt.remove(key);
+        }
         else if (str == "stop") {
             break;
         }
