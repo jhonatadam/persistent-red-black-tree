@@ -22,7 +22,14 @@ public:
 
 private:
     vector<PersistentNode*> accessPointers;
+
+    PersistentNode *insertFixup(stack<PersistentNode*> path, const unsigned &version);
+    PersistentNode *rotateLeft(PersistentNode *node, const unsigned &version);
+    PersistentNode *rotateRight(PersistentNode *node, const unsigned &version);
+    void flipColors(PersistentNode *node, const unsigned &version);
+    bool isRed(PersistentNode *node);
     void treeToString(PersistentNode *node, string &str, unsigned version);
+
 };
 
 #endif // PERSISTENTREDBLACKTREE_H

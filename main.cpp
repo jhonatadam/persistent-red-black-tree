@@ -16,7 +16,7 @@ int main()
         int key;
         unsigned version;
 
-        if (str == "is") {
+        if (str == "in") {
             cin >> key;
             rbt.insert(key);
         }

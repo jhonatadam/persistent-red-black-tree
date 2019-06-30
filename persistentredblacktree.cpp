@@ -12,6 +12,7 @@ unsigned PersistentRedBlackTree::insert(const int &key)
     // if there is no version
     if (accessPointers.empty() || (accessPointers.back() == nullptr)) {
         accessPointers.push_back(new PersistentNode(key, version));
+        accessPointers.back()->setColor(Black);
         return version;
     }
 
@@ -26,28 +27,16 @@ unsigned PersistentRedBlackTree::insert(const int &key)
             currentNode = currentNode->getRight(version);
     }
 
-    currentNode = new PersistentNode(key, version);
+    path.push(new PersistentNode(key, version));
+    // ligando novo nó à arvore
+//    currentNode = new PersistentNode(key, version);
+//    PersistentNode* currentNodeParent = path.top()->updateOrCopy(currentNode, version);
+//    path.pop();
+//    path.push(currentNodeParent);
+//    path.push(currentNode);
 
-    while (!path.top()->update(currentNode, version)) {
-        PersistentNode* parentCopy = new PersistentNode(path.top()->key,
-                                                        path.top()->getLeft(version),
-                                                        path.top()->getRight(version),
-                                                        version);
-        parentCopy->update(currentNode, version);
-        currentNode = parentCopy;
-        path.pop();
-
-        if (path.empty())
-            break;
-    }
-
-    while(!path.empty()) {
-        currentNode = path.top();
-        path.pop();
-    }
-
-    accessPointers.push_back(currentNode);
-
+    accessPointers.push_back(insertFixup(path, version));
+    accessPointers.back()->setColor(Black);
     return version;
 }
 
@@ -115,6 +104,78 @@ string PersistentRedBlackTree::toString(unsigned version)
     return str;
 }
 
+PersistentNode *PersistentRedBlackTree::insertFixup(stack<PersistentNode *> path, const unsigned & version)
+{
+    PersistentNode *node = path.top();
+    path.pop();
+
+    while (path.top()->isRed()) {
+        PersistentNode *nodeParent = path.top()->updateOrCopy(node, version);
+        path.pop();
+
+        if (nodeParent->key < path.top()->key) {
+            PersistentNode * nodeUncle = path.top()->getRight(version);
+
+            // troca de cores
+            if (isRed(nodeUncle)) {
+                nodeParent->setColor(Black);
+                nodeUncle->setColor(Black);
+                path.top()->setColor(Red);
+
+                node = path.top()->updateOrCopy(nodeParent, version);
+                path.pop();
+                if (path.empty())
+                    break;
+            } else { // rotação
+                if (node == nodeParent->getRight(version)) {
+                    node = nodeParent;
+                    nodeParent = rotateLeft(nodeParent,version);
+                }
+
+                nodeParent->setColor(Black);
+                path.top()->setColor(Red);
+
+                PersistentNode * nodeGrandParent = path.top()->updateOrCopy(nodeParent, version);
+                path.pop();
+                path.push(rotateRight(nodeGrandParent, version));
+             }
+
+        } else {
+            // simétrico
+        }
+    }
+
+    while(!path.empty()) {
+        node = path.top()->updateOrCopy(node, version);
+        path.pop();
+    }
+
+    return node;
+}
+
+PersistentNode *PersistentRedBlackTree::rotateLeft(PersistentNode *node, const unsigned & version)
+{
+    PersistentNode * aux = node->getRight(version);
+    node = node->updateOrCopy(aux->getLeft(version), version, Right);
+    aux = aux->updateOrCopy(node, version, Left);
+    return aux;
+}
+
+PersistentNode *PersistentRedBlackTree::rotateRight(PersistentNode *node, const unsigned & version)
+{
+    PersistentNode * aux = node->getLeft(version);
+    node = node->updateOrCopy(aux->getRight(version), version, Left);
+    aux = aux->updateOrCopy(node, version, Right);
+    return aux;
+}
+
+bool PersistentRedBlackTree::isRed(PersistentNode *node)
+{
+    if (node == nullptr)
+        return false;
+    return node->isRed();
+}
+
 void PersistentRedBlackTree::treeToString(PersistentNode *node, string &str, unsigned version)
 {
     if (node == nullptr)
@@ -123,7 +184,7 @@ void PersistentRedBlackTree::treeToString(PersistentNode *node, string &str, uns
         return;
     }
 
-    str += "[" + to_string(node->key) + ", ";
+    str += "[" + to_string(node->key) + ":" + (node->isRed() ? "r" : "b") + ", ";
     treeToString(node->getLeft(version), str, version);
     str += ", ";
     treeToString(node->getRight(version), str, version);
