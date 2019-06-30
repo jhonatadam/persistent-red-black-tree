@@ -141,7 +141,31 @@ PersistentNode *PersistentRedBlackTree::insertFixup(stack<PersistentNode *> path
              }
 
         } else {
-            // simétrico
+            PersistentNode * nodeUncle = path.top()->getLeft(version);
+
+            // troca de cores
+            if (isRed(nodeUncle)) {
+                nodeParent->setColor(Black);
+                nodeUncle->setColor(Black);
+                path.top()->setColor(Red);
+
+                node = path.top()->updateOrCopy(nodeParent, version);
+                path.pop();
+                if (path.empty())
+                    break;
+            } else { // rotação
+                if (node == nodeParent->getLeft(version)) {
+                    node = nodeParent;
+                    nodeParent = rotateRight(nodeParent,version);
+                }
+
+                nodeParent->setColor(Black);
+                path.top()->setColor(Red);
+
+                PersistentNode * nodeGrandParent = path.top()->updateOrCopy(nodeParent, version);
+                path.pop();
+                path.push(rotateLeft(nodeGrandParent, version));
+             }
         }
     }
 
