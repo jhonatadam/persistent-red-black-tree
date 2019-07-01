@@ -56,25 +56,31 @@ unsigned PersistentRedBlackTree::remove(const int &key)
         else
             currentNode = currentNode->getRight(version);
     }
+
     NodeColor successorColor;
     // a chave não está na árvore
     if (currentNode == nullptr) {
         return version - 1;
-    }// o nó a ser removido não tem filhos
-    else if (currentNode->getLeft(version) == nullptr && currentNode->getRight(version) == nullptr) {
+    }
+    PointerStatus status;//essa variável indica se o ultimo no da pilha é um filho a esquerda ou direita
+
+    // o nó a ser removido não tem filhos
+    if (currentNode->getLeft(version) == nullptr && currentNode->getRight(version) == nullptr) {
         if (path.empty()) { // a arvore tem apenas um nó
             accessPointers.push_back(nullptr);
             return version;
         }
-        PointerStatus status = (currentNode->key < path.top()->key ? Left : Right);
+        status = (currentNode->key < path.top()->key ? Left : Right);
         PersistentNode * nodeParent = path.top()->updateOrCopy(nullptr, version, status);
         successorColor = currentNode->getColor();
         path.pop();
         path.push(nodeParent);
+        path.push(nullptr);//para ser consistente com os demais casos
     } // o nó a ser removido tem apenas filho a direita
     else if (currentNode->getLeft(version) == nullptr) {
         successorColor = currentNode->getColor();
         path.push(currentNode->getRight(version));
+        status = Right;
 //        PersistentNode * nodeParent = path.top()->updateOrCopy(currentNode->getRight(version), version);
 //        path.pop();
 //        path.push(nodeParent);
@@ -83,12 +89,14 @@ unsigned PersistentRedBlackTree::remove(const int &key)
     else if (currentNode->getRight(version) == nullptr) {
         successorColor = currentNode->getColor();
         path.push(currentNode->getLeft(version));
+        status = Left;
 //        PersistentNode * nodeParent = path.top()->updateOrCopy(currentNode->getLeft(version), version);
 //        path.pop();
 //        path.push(nodeParent);
 //        path.push(currentNode->getLeft(version));
     } // o nó tem dois filhos
     else {
+
         queue<PersistentNode*> pathToSucessor;
         PersistentNode* nodeSuccessor = currentNode->getRight(version);
         while (nodeSuccessor->getLeft(version) != nullptr) {
@@ -97,30 +105,34 @@ unsigned PersistentRedBlackTree::remove(const int &key)
         }
         successorColor = nodeSuccessor->getColor();
         PersistentNode* successorChild = nodeSuccessor->getRight(version);
+        status = (nodeSuccessor == currentNode->getRight(version)? Right: Left);// Precisa atualizar o status pois succChild pode ser nulo
 
-        nodeSuccessor = nodeSuccessor->updateOrCopy(currentNode->getLeft(version),version);// atualiza o filho esquerdo do sucessor
+        nodeSuccessor = nodeSuccessor->updateOrCopy(currentNode->getLeft(version),version, Left);// atualiza o filho esquerdo do sucessor
         nodeSuccessor->setColor(currentNode->getColor());
         path.push(nodeSuccessor);
 
-        pathToSucessor.push(successorChild);//corrigir caso seja nulo
+        pathToSucessor.push(successorChild);
         while(!pathToSucessor.empty()){
             path.push(pathToSucessor.front());
             pathToSucessor.pop();
         }
 
     }
+
     if(successorColor == Black){
-        accessPointers.push_back(removeFixup(path, version));
+        accessPointers.push_back(removeFixup(path, status ,version));
+        accessPointers.back()->setColor(Black);
     }
     else{
         currentNode = path.top();
         path.pop();
         while(!path.empty()){
-            currentNode = path.top()->updateOrCopy(currentNode,version);
+            currentNode = (currentNode == nullptr? path.top()->updateOrCopy(currentNode,version, status) : path.top()->updateOrCopy(currentNode,version));
             path.pop();
         }
         accessPointers.push_back(currentNode);
     }
+
     //accessPointers.back()->setColor(Black); a arvore pode ter ficado vazia
     return version;
 }
@@ -181,15 +193,17 @@ int PersistentRedBlackTree::predecessor(const int &key, const unsigned &version)
 
 string PersistentRedBlackTree::toString(unsigned version)
 {
-    if (version >= accessPointers.size())
-        throw "sucessor(): A versão passada ainda não existe.";
-
     string str;
+    if (version >= accessPointers.size()){
+        throw "sucessor(): A versão passada ainda não existe.";
+        //treeToString(accessPointers.back(), str, (version>0)? static_cast<unsigned>(accessPointers.size()-1): 0);
+    }
+
     treeToString(accessPointers[version], str, version);
     return str;
 }
 
-PersistentNode *PersistentRedBlackTree::insertFixup(stack<PersistentNode *> path, const unsigned & version)
+PersistentNode *PersistentRedBlackTree::insertFixup(stack<PersistentNode *> path,  const unsigned & version)
 {
     PersistentNode *node = path.top();
     path.pop();
@@ -262,9 +276,105 @@ PersistentNode *PersistentRedBlackTree::insertFixup(stack<PersistentNode *> path
     return node;
 }
 
-PersistentNode *PersistentRedBlackTree::removeFixup(stack<PersistentNode *> path, const unsigned &version)
+//passando esse statuslNullNode pro caso em que o topo da pilha é null, pra decidir qual lado ir. Qqr outra solução é bem vinda
+PersistentNode *PersistentRedBlackTree::removeFixup(stack<PersistentNode *> path, PointerStatus statusNode, const unsigned &version)
 {
-    return path.top();
+    bool flagCase4 = false;
+    while (path.size() > 1 && (path.top()==nullptr? true : path.top()->getColor() == Black)) {
+        PersistentNode *node = path.top();
+        path.pop();
+        if(node != nullptr)
+            statusNode = (node->key < path.top()->key ? Left : Right);
+
+        if (statusNode == Left) {
+            PersistentNode * nodeBrother = path.top()->getRight(version);
+
+            // troca de cores
+            if (isRed(nodeBrother)) {
+                nodeBrother->setColor(Black);
+                PersistentNode* nodeParent = path.top();
+                path.pop();
+
+                nodeParent->setColor(Red);
+                path.push(rotateLeft(nodeParent, version));
+                nodeBrother = nodeParent->getRight(version);// após a rotação na linha anterior node tem um novo irmão
+                path.push(nodeParent); //para manter consistência com o topo sendo o pai de node e nodeBrother
+
+            }
+            if(nodeBrother->getLeft(version)->getColor() == Black &&
+                    nodeBrother->getRight(version)->getColor() == Black){// os dois filhos são pretos
+                nodeBrother->setColor(Red);
+                //path.pop(); pois demos no início
+
+            } else{
+                PersistentNode *nodeParent = path.top();// remove logo pro caso de entrar no próx if
+                path.pop();
+                if(nodeBrother->getRight(version)->getColor() == Black) {//isso implica que filho esquerdo existe e não é nulo, pois é Red
+                    nodeBrother->getLeft(version)->setColor(Black);
+                    nodeBrother->setColor(Red);
+
+                    nodeBrother = rotateRight(nodeBrother,version); //filho esquerdo de nodeBrother ser torna irmão de node
+                    nodeParent  = nodeParent->updateOrCopy(nodeBrother, version);//a próx rotação assume esse update
+                    nodeBrother = path.top();
+                }
+                nodeBrother->setColor(nodeParent->getColor());
+                nodeParent->setColor(Black);
+                path.push(rotateLeft(nodeParent, version));
+
+                break;
+            }
+        }else { // caso simétrico
+            PersistentNode * nodeBrother = path.top()->getLeft(version);
+
+            // troca de cores
+            if (isRed(nodeBrother)) {
+                nodeBrother->setColor(Black);
+                PersistentNode* nodeParent = path.top();
+                path.pop();
+
+                nodeParent->setColor(Red);
+                path.push(rotateRight(nodeParent, version));
+                nodeBrother = nodeParent->getLeft(version);// após a rotação na linha anterior node tem um novo irmão
+                path.push(nodeParent); //para manter consistência com o topo sendo o pai de node e nodeBrother
+
+            }
+            if(nodeBrother->getRight(version)->getColor() == Black &&
+                    nodeBrother->getLeft(version)->getColor() == Black){// os dois filhos são pretos
+                nodeBrother->setColor(Red);
+                //path.pop(); pois demos no início
+
+            } else{
+                PersistentNode *nodeParent = path.top();// remove logo pro caso de entrar no próx if
+                path.top();
+                if(nodeBrother->getLeft(version)->getColor() == Black) {//isso implica que filho esquerdo existe e não é nulo, pois é Red
+                    nodeBrother->getRight(version)->setColor(Black);
+                    nodeBrother->setColor(Red);
+
+                    nodeBrother = rotateLeft(nodeBrother,version); //filho esquerdo de nodeBrother ser torna irmão de node
+                    nodeParent  = nodeParent->updateOrCopy(nodeBrother, version);//a próx rotação assume esse update
+                    nodeBrother = path.top();
+                }
+                nodeBrother->setColor(nodeParent->getColor());
+                nodeParent->setColor(Black);
+                path.push(rotateRight(nodeParent, version));
+                flagCase4 = true;
+                break;
+            }
+        }
+    }
+    if(path.empty()){ //não sei se pode acontecer, mas caso aconteça
+        return  nullptr;
+    }else{
+        PersistentNode *node = path.top();
+        path.pop();
+        if(!flagCase4)//para o caso em que terminamos por encontrar um nó red
+            node->setColor(Black);
+        while(!path.empty()) {
+            node = path.top()->updateOrCopy(node, version);
+            path.pop();
+        }
+        return node;
+    }
 }
 
 PersistentNode *PersistentRedBlackTree::rotateLeft(PersistentNode *node, const unsigned & version)
