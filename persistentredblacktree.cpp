@@ -70,6 +70,7 @@ unsigned PersistentRedBlackTree::remove(const int &key)
             accessPointers.push_back(nullptr);
             return version;
         }
+
         status = (currentNode->key < path.top()->key ? Left : Right);
         PersistentNode * nodeParent = path.top()->updateOrCopy(nullptr, version, status);
         successorColor = currentNode->getColor();
@@ -81,19 +82,11 @@ unsigned PersistentRedBlackTree::remove(const int &key)
         successorColor = currentNode->getColor();
         path.push(currentNode->getRight(version));
         status = Right;
-//        PersistentNode * nodeParent = path.top()->updateOrCopy(currentNode->getRight(version), version);
-//        path.pop();
-//        path.push(nodeParent);
-//        path.push(currentNode->getRight(version));
     } // o nó a ser removido tem apenas filho a esquerda
     else if (currentNode->getRight(version) == nullptr) {
         successorColor = currentNode->getColor();
         path.push(currentNode->getLeft(version));
         status = Left;
-//        PersistentNode * nodeParent = path.top()->updateOrCopy(currentNode->getLeft(version), version);
-//        path.pop();
-//        path.push(nodeParent);
-//        path.push(currentNode->getLeft(version));
     } // o nó tem dois filhos
     else {
 
@@ -280,7 +273,7 @@ PersistentNode *PersistentRedBlackTree::insertFixup(stack<PersistentNode *> path
 PersistentNode *PersistentRedBlackTree::removeFixup(stack<PersistentNode *> path, PointerStatus statusNode, const unsigned &version)
 {
     bool flagCase4 = false;
-    while (path.size() > 1 && (path.top()==nullptr? true : path.top()->getColor() == Black)) {
+    while (path.size() > 1 && !isRed(path.top())) {
         PersistentNode *node = path.top();
         path.pop();
         if(node != nullptr)
@@ -301,15 +294,13 @@ PersistentNode *PersistentRedBlackTree::removeFixup(stack<PersistentNode *> path
                 path.push(nodeParent); //para manter consistência com o topo sendo o pai de node e nodeBrother
 
             }
-            if(nodeBrother->getLeft(version)->getColor() == Black &&
-                    nodeBrother->getRight(version)->getColor() == Black){// os dois filhos são pretos
+            if(!isRed(nodeBrother->getLeft(version)) && !isRed(nodeBrother->getRight(version))){// os dois filhos são pretos
                 nodeBrother->setColor(Red);
                 //path.pop(); pois demos no início
-
             } else{
                 PersistentNode *nodeParent = path.top();// remove logo pro caso de entrar no próx if
                 path.pop();
-                if(nodeBrother->getRight(version)->getColor() == Black) {//isso implica que filho esquerdo existe e não é nulo, pois é Red
+                if(!isRed(nodeBrother->getRight(version))) {//isso implica que filho esquerdo existe e não é nulo, pois é Red
                     nodeBrother->getLeft(version)->setColor(Black);
                     nodeBrother->setColor(Red);
 
@@ -317,10 +308,14 @@ PersistentNode *PersistentRedBlackTree::removeFixup(stack<PersistentNode *> path
                     nodeParent  = nodeParent->updateOrCopy(nodeBrother, version);//a próx rotação assume esse update
                     nodeBrother = path.top();
                 }
+
                 nodeBrother->setColor(nodeParent->getColor());
                 nodeParent->setColor(Black);
+                if (nodeBrother->getRight(version) != nullptr)
+                    nodeBrother->getRight(version)->setColor(Black);
                 path.push(rotateLeft(nodeParent, version));
 
+                flagCase4 = true;
                 break;
             }
         }else { // caso simétrico
@@ -356,12 +351,15 @@ PersistentNode *PersistentRedBlackTree::removeFixup(stack<PersistentNode *> path
                 }
                 nodeBrother->setColor(nodeParent->getColor());
                 nodeParent->setColor(Black);
+                if (nodeBrother->getLeft(version) != nullptr)
+                    nodeBrother->getLeft(version)->setColor(Black);
                 path.push(rotateRight(nodeParent, version));
                 flagCase4 = true;
                 break;
             }
         }
     }
+
     if(path.empty()){ //não sei se pode acontecer, mas caso aconteça
         return  nullptr;
     }else{
